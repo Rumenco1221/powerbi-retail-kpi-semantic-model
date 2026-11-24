@@ -1,0 +1,333 @@
+createOrReplace
+
+	table DimStore
+		column StoreKey
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: StoreKey
+
+		column Store
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Store
+
+		column Region
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Region
+
+		column Country
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Country
+
+		column Format
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Format
+
+		partition DimStore = m
+			mode: import
+			source =
+					let
+						Source = Csv.Document(Web.Contents("https://raw.githubusercontent.com/Rumenco1221/powerbi-retail-kpi-semantic-model/main/data/DimStore.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+						Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+						Typed = Table.TransformColumnTypes(Headers, {{"StoreKey", Int64.Type}, {"Store", type text}, {"Region", type text}, {"Country", type text}, {"Format", type text}}, "en-US")
+					in
+						Typed
+
+	table DimProduct
+		column ProductKey
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: ProductKey
+
+		column Product
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Product
+
+		column Category
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Category
+
+		column ListPrice
+			dataType: decimal
+			summarizeBy: sum
+			sourceColumn: ListPrice
+
+		column UnitCost
+			dataType: decimal
+			summarizeBy: sum
+			sourceColumn: UnitCost
+
+		partition DimProduct = m
+			mode: import
+			source =
+					let
+						Source = Csv.Document(Web.Contents("https://raw.githubusercontent.com/Rumenco1221/powerbi-retail-kpi-semantic-model/main/data/DimProduct.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+						Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+						Typed = Table.TransformColumnTypes(Headers, {{"ProductKey", Int64.Type}, {"Product", type text}, {"Category", type text}, {"ListPrice", Currency.Type}, {"UnitCost", Currency.Type}}, "en-US")
+					in
+						Typed
+
+	table DimCustomer
+		column CustomerKey
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: CustomerKey
+
+		column Segment
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Segment
+
+		column AgeBand
+			dataType: string
+			summarizeBy: none
+			sourceColumn: AgeBand
+
+		partition DimCustomer = m
+			mode: import
+			source =
+					let
+						Source = Csv.Document(Web.Contents("https://raw.githubusercontent.com/Rumenco1221/powerbi-retail-kpi-semantic-model/main/data/DimCustomer.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+						Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+						Typed = Table.TransformColumnTypes(Headers, {{"CustomerKey", Int64.Type}, {"Segment", type text}, {"AgeBand", type text}}, "en-US")
+					in
+						Typed
+
+	table FactSales
+		column OrderID
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: OrderID
+
+		column OrderDate
+			dataType: dateTime
+			formatString: dd/mm/yyyy
+			summarizeBy: none
+			sourceColumn: OrderDate
+
+		column StoreKey
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: StoreKey
+
+		column ProductKey
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: ProductKey
+
+		column CustomerKey
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: CustomerKey
+
+		column Quantity
+			dataType: int64
+			summarizeBy: sum
+			sourceColumn: Quantity
+
+		column UnitPrice
+			dataType: decimal
+			summarizeBy: sum
+			sourceColumn: UnitPrice
+
+		column UnitCost
+			dataType: decimal
+			summarizeBy: sum
+			sourceColumn: UnitCost
+
+		column Discount
+			dataType: double
+			summarizeBy: sum
+			sourceColumn: Discount
+
+		column SalesAmount = FactSales[Quantity] * FactSales[UnitPrice]
+			dataType: decimal
+			formatString: "$"#,0.00
+			summarizeBy: sum
+
+		column CostAmount = FactSales[Quantity] * FactSales[UnitCost]
+			dataType: decimal
+			formatString: "$"#,0.00
+			summarizeBy: sum
+
+		measure Sales = SUM ( FactSales[SalesAmount] )
+			formatString: "$"#,0
+			displayFolder: 01 Base
+
+		measure Cost = SUM ( FactSales[CostAmount] )
+			formatString: "$"#,0
+			displayFolder: 01 Base
+
+		measure Units = SUM ( FactSales[Quantity] )
+			formatString: #,0
+			displayFolder: 01 Base
+
+		measure Orders = DISTINCTCOUNT ( FactSales[OrderID] )
+			formatString: #,0
+			displayFolder: 01 Base
+
+		measure 'Average Ticket' = DIVIDE ( [Sales], [Orders] )
+			formatString: "$"#,0
+			displayFolder: 01 Base
+
+		measure 'Sales PY' = CALCULATE ( [Sales], SAMEPERIODLASTYEAR ( DimDate[Date] ) )
+			formatString: "$"#,0
+			displayFolder: 02 Time Intelligence
+
+		measure 'Sales YoY %' = DIVIDE ( [Sales] - [Sales PY], [Sales PY] )
+			formatString: 0.0%;-0.0%;0.0%
+			displayFolder: 02 Time Intelligence
+
+		measure 'Sales YTD' = TOTALYTD ( [Sales], DimDate[Date] )
+			formatString: "$"#,0
+			displayFolder: 02 Time Intelligence
+
+		measure 'Sales PY YTD' = CALCULATE ( [Sales YTD], SAMEPERIODLASTYEAR ( DimDate[Date] ) )
+			formatString: "$"#,0
+			displayFolder: 02 Time Intelligence
+
+		measure 'Sales MoM %' = VAR _prev = CALCULATE ( [Sales], DATEADD ( DimDate[Date], -1, MONTH ) ) RETURN DIVIDE ( [Sales] - _prev, _prev )
+			formatString: 0.0%;-0.0%;0.0%
+			displayFolder: 02 Time Intelligence
+
+		measure 'Sales Rolling 3M' = CALCULATE ( [Sales], DATESINPERIOD ( DimDate[Date], MAX ( DimDate[Date] ), -3, MONTH ) )
+			formatString: "$"#,0
+			displayFolder: 02 Time Intelligence
+
+		measure 'Gross Margin' = [Sales] - [Cost]
+			formatString: "$"#,0
+			displayFolder: 03 Rentabilidad
+
+		measure 'Gross Margin %' = DIVIDE ( [Gross Margin], [Sales] )
+			formatString: 0.0%;-0.0%;0.0%
+			displayFolder: 03 Rentabilidad
+
+		measure 'Avg Discount %' = AVERAGE ( FactSales[Discount] )
+			formatString: 0.0%;-0.0%;0.0%
+			displayFolder: 03 Rentabilidad
+
+		measure 'Discount Impact' = SUMX ( FactSales, FactSales[Quantity] * RELATED ( DimProduct[ListPrice] ) ) - [Sales]
+			formatString: "$"#,0
+			displayFolder: 03 Rentabilidad
+
+		measure 'Active Customers' = DISTINCTCOUNT ( FactSales[CustomerKey] )
+			formatString: #,0
+			displayFolder: 04 Clientes
+
+		measure 'Sales per Customer' = DIVIDE ( [Sales], [Active Customers] )
+			formatString: "$"#,0
+			displayFolder: 04 Clientes
+
+		measure 'Repeat Customers' = COUNTROWS ( FILTER ( VALUES ( FactSales[CustomerKey] ), CALCULATE ( DISTINCTCOUNT ( FactSales[OrderID] ) ) > 1 ) )
+			formatString: #,0
+			displayFolder: 04 Clientes
+
+		measure 'Repeat Rate %' = DIVIDE ( [Repeat Customers], [Active Customers] )
+			formatString: 0.0%;-0.0%;0.0%
+			displayFolder: 04 Clientes
+
+		measure 'Product Rank' = IF ( HASONEVALUE ( DimProduct[Product] ), RANKX ( ALLSELECTED ( DimProduct[Product] ), [Sales], , DESC, DENSE ) )
+			formatString: #,0
+			displayFolder: 04 Clientes
+
+		measure 'Category Share %' = DIVIDE ( [Sales], CALCULATE ( [Sales], ALLSELECTED ( DimProduct[Category] ) ) )
+			formatString: 0.0%;-0.0%;0.0%
+			displayFolder: 04 Clientes
+
+		measure 'Title Sales' = "Ventas " & SELECTEDVALUE ( DimDate[Year], "todos los años" ) & " · " & FORMAT ( [Sales], "$ #,##0" ) & " (" & FORMAT ( [Sales YoY %], "+0.0%;-0.0%" ) & " vs año anterior)"
+			displayFolder: 05 UX
+
+		measure 'YoY Color' = SWITCH ( TRUE (), ISBLANK ( [Sales YoY %] ), "#9CA3AF", [Sales YoY %] >= 0.05, "#16A34A", [Sales YoY %] >= 0, "#F59E0B", "#DC2626" )
+			displayFolder: 05 UX
+
+		measure 'YoY Arrow' = IF ( [Sales YoY %] >= 0, "▲ ", "▼ " ) & FORMAT ( ABS ( [Sales YoY %] ), "0.0%" )
+			displayFolder: 05 UX
+
+		partition FactSales = m
+			mode: import
+			source =
+					let
+						Source = Csv.Document(Web.Contents("https://raw.githubusercontent.com/Rumenco1221/powerbi-retail-kpi-semantic-model/main/data/FactSales.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+						Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+						Typed = Table.TransformColumnTypes(Headers, {{"OrderID", Int64.Type}, {"OrderDate", type date}, {"StoreKey", Int64.Type}, {"ProductKey", Int64.Type}, {"CustomerKey", Int64.Type}, {"Quantity", Int64.Type}, {"UnitPrice", Currency.Type}, {"UnitCost", Currency.Type}, {"Discount", type number}}, "en-US")
+					in
+						Typed
+
+	table DimDate
+		dataCategory: Time
+
+		column Date
+			dataType: dateTime
+			isKey
+			formatString: dd/mm/yyyy
+			summarizeBy: none
+			sourceColumn: Date
+
+		column Year
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: Year
+
+		column MonthNumber
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: MonthNumber
+
+		column MonthName
+			dataType: string
+			sortByColumn: MonthNumber
+			summarizeBy: none
+			sourceColumn: MonthName
+
+		column MonthShort
+			dataType: string
+			sortByColumn: MonthNumber
+			summarizeBy: none
+			sourceColumn: MonthShort
+
+		column YearMonth
+			dataType: int64
+			summarizeBy: none
+			sourceColumn: YearMonth
+
+		column Quarter
+			dataType: string
+			summarizeBy: none
+			sourceColumn: Quarter
+
+		partition DimDate = m
+			mode: import
+			source =
+					let
+						Dates = List.Dates(#date(2024, 1, 1), Duration.Days(#date(2026, 12, 31) - #date(2024, 1, 1)) + 1, #duration(1, 0, 0, 0)),
+						T0 = Table.FromList(Dates, Splitter.SplitByNothing(), {"Date"}),
+						T1 = Table.TransformColumnTypes(T0, {{"Date", type date}}),
+						T2 = Table.AddColumn(T1, "Year", each Date.Year([Date]), Int64.Type),
+						T3 = Table.AddColumn(T2, "MonthNumber", each Date.Month([Date]), Int64.Type),
+						T4 = Table.AddColumn(T3, "MonthName", each Text.Proper(Date.MonthName([Date], "es-AR")), type text),
+						T5 = Table.AddColumn(T4, "MonthShort", each Text.Start([MonthName], 3), type text),
+						T6 = Table.AddColumn(T5, "YearMonth", each [Year] * 100 + [MonthNumber], Int64.Type),
+						T7 = Table.AddColumn(T6, "Quarter", each "T" & Text.From(Date.QuarterOfYear([Date])), type text)
+					in
+						T7
+
+	relationship FactSales_OrderDate
+		fromColumn: FactSales.OrderDate
+		toColumn: DimDate.Date
+
+	relationship FactSales_StoreKey
+		fromColumn: FactSales.StoreKey
+		toColumn: DimStore.StoreKey
+
+	relationship FactSales_ProductKey
+		fromColumn: FactSales.ProductKey
+		toColumn: DimProduct.ProductKey
+
+	relationship FactSales_CustomerKey
+		fromColumn: FactSales.CustomerKey
+		toColumn: DimCustomer.CustomerKey
