@@ -85,7 +85,7 @@ Propuestas de medidas nuevas: abrí un *issue* con la definición de negocio y e
 ## 📬 Contacto
 
 **Estela Oviedo** — Power BI · Power Query · DAX · Data Analytics
-[LinkedIn](https://www.linkedin.com/in/estela-oviedo) · [GitHub](https://github.com/Rumenco1221)
+[LinkedIn](https://www.linkedin.com/in/estela-oviedo-cortez-796303228) · [GitHub](https://github.com/Rumenco1221)
 
 ---
 <sub>Licencia MIT · Datos sintéticos.</sub>
