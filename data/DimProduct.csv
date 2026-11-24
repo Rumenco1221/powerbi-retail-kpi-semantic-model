@@ -1,0 +1,18 @@
+ProductKey,Product,Category,ListPrice,UnitCost
+1,Notebook,Tecnología,179.98,103.6
+2,Monitor,Tecnología,723.87,481.37
+3,Tablet,Tecnología,157.15,79.49
+4,Auriculares,Tecnología,847.43,499.25
+5,Smartwatch,Tecnología,1099.97,645.63
+6,Cafetera,Hogar,223.2,143.3
+7,Aspiradora,Hogar,229.04,136.65
+8,Lámpara,Hogar,83.38,50.32
+9,Freidora de aire,Hogar,46.56,30.46
+10,Bicicleta,Deportes,143.15,93.58
+11,Zapatillas,Deportes,210.28,130.34
+12,Mochila,Deportes,74.91,38.42
+13,Yoga Mat,Deportes,294.28,200.8
+14,Campera,Moda,244.46,171.1
+15,Jean,Moda,161.37,75.7
+16,Remera,Moda,112.01,66.01
+17,Bolso,Moda,98.25,55.45

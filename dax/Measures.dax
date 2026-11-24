@@ -1,0 +1,72 @@
+// =====================================================================
+//  Biblioteca de medidas DAX — Retail KPI Semantic Model
+//  Crear una tabla vacía "_Measures" y agregar cada medida allí.
+//  Carpetas sugeridas: 01 Base · 02 Time Intelligence · 03 Rentabilidad · 04 Clientes · 05 UX
+// =====================================================================
+
+// ---------- 01 Base ----------
+Sales = SUM ( FactSales[SalesAmount] )
+Cost = SUM ( FactSales[CostAmount] )
+Units = SUM ( FactSales[Quantity] )
+Orders = DISTINCTCOUNT ( FactSales[OrderID] )
+Average Ticket = DIVIDE ( [Sales], [Orders] )
+
+// ---------- 02 Time Intelligence (requiere DimDate marcada como tabla de fechas) ----------
+Sales PY = CALCULATE ( [Sales], SAMEPERIODLASTYEAR ( DimDate[Date] ) )
+Sales YoY % = DIVIDE ( [Sales] - [Sales PY], [Sales PY] )
+Sales YTD = TOTALYTD ( [Sales], DimDate[Date] )
+Sales PY YTD = CALCULATE ( [Sales YTD], SAMEPERIODLASTYEAR ( DimDate[Date] ) )
+Sales MoM % =
+VAR _prev = CALCULATE ( [Sales], DATEADD ( DimDate[Date], -1, MONTH ) )
+RETURN DIVIDE ( [Sales] - _prev, _prev )
+Sales Rolling 3M =
+CALCULATE (
+    [Sales],
+    DATESINPERIOD ( DimDate[Date], MAX ( DimDate[Date] ), -3, MONTH )
+)
+
+// ---------- 03 Rentabilidad ----------
+Gross Margin = [Sales] - [Cost]
+Gross Margin % = DIVIDE ( [Gross Margin], [Sales] )
+Avg Discount % = AVERAGEX ( FactSales, FactSales[Discount] )
+Discount Impact =
+SUMX ( FactSales, FactSales[Quantity] * RELATED ( DimProduct[ListPrice] ) ) - [Sales]
+
+// ---------- 04 Clientes ----------
+Active Customers = DISTINCTCOUNT ( FactSales[CustomerKey] )
+Sales per Customer = DIVIDE ( [Sales], [Active Customers] )
+Repeat Customers =
+COUNTROWS (
+    FILTER (
+        VALUES ( FactSales[CustomerKey] ),
+        CALCULATE ( DISTINCTCOUNT ( FactSales[OrderID] ) ) > 1
+    )
+)
+Repeat Rate % = DIVIDE ( [Repeat Customers], [Active Customers] )
+
+// Ranking de producto que respeta los filtros de la página
+Product Rank =
+IF (
+    HASONEVALUE ( DimProduct[Product] ),
+    RANKX ( ALLSELECTED ( DimProduct[Product] ), [Sales], , DESC, DENSE )
+)
+
+// Participación de la categoría sobre el total visible
+Category Share % =
+DIVIDE ( [Sales], CALCULATE ( [Sales], ALLSELECTED ( DimProduct[Category] ) ) )
+
+// ---------- 05 UX: títulos dinámicos y semáforos ----------
+Title Sales =
+"Ventas " & SELECTEDVALUE ( DimDate[Year], "todos los años" ) & " · "
+    & FORMAT ( [Sales], "$ #,##0" ) & " ("
+    & FORMAT ( [Sales YoY %], "+0.0%;-0.0%" ) & " vs año anterior)"
+
+YoY Color =
+SWITCH ( TRUE (),
+    ISBLANK ( [Sales YoY %] ), "#9CA3AF",
+    [Sales YoY %] >= 0.05, "#16A34A",
+    [Sales YoY %] >= 0, "#F59E0B",
+    "#DC2626"
+)
+
+YoY Arrow = IF ( [Sales YoY %] >= 0, "▲ ", "▼ " ) & FORMAT ( ABS ( [Sales YoY %] ), "0.0%" )
