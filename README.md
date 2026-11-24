@@ -53,7 +53,7 @@ DimCustomer 1:*┘
 ## ⚙️ Instalación
 
 ```bash
-git clone https://github.com/estela-oviedo/powerbi-retail-kpi-semantic-model.git
+git clone https://github.com/Rumenco1221/powerbi-retail-kpi-semantic-model.git
 cd powerbi-retail-kpi-semantic-model
 pip install -r requirements.txt
 python scripts/generate_star_schema.py   # (re)genera los CSV de /data
@@ -85,7 +85,7 @@ Propuestas de medidas nuevas: abrí un *issue* con la definición de negocio y e
 ## 📬 Contacto
 
 **Estela Oviedo** — Power BI · Power Query · DAX · Data Analytics
-[LinkedIn](https://www.linkedin.com/in/estela-oviedo) · [GitHub](https://github.com/estela-oviedo)
+[LinkedIn](https://www.linkedin.com/in/estela-oviedo) · [GitHub](https://github.com/Rumenco1221)
 
 ---
 <sub>Licencia MIT · Datos sintéticos.</sub>
